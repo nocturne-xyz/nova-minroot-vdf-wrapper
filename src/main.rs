@@ -72,7 +72,8 @@ fn main() {
         args.log_num_iters
     );
 
-    // the following code is adapted from main() in https://github.com/microsoft/Nova/blob/main/examples/minroot.rs
+    // the rest of this function's body is adapted from main() in https://github.com/microsoft/Nova/blob/main/examples/minroot.rs
+
     let circuit_primary = MinRootCircuit {
         seq: vec![
             MinRootIteration {
@@ -113,17 +114,9 @@ fn main() {
         pp.num_variables().1
     );
 
-    // proceed with two threads - one for witness generation, the other for proving
-    // the witness generation thread will produce witnesses, and the main thread will iterate
-    // over them prove them sequentially
-    // this is done for two reasons:
-    // 1. because witness generation becomes a bottleneck when `num_iters_per_step` is on the larger side
-    // 2. to produce the proofs in a streaming manner to avoid loading all of the witnesses into memory at once
+    // proceed with two threads - one that runs the VDF / generates witnesses, the other for proving
 
-    // target a max of ~4GB of memory usage
-    let buffer_size = (1 << 32) / (num_iters_per_step * mem::size_of::<MinRootIteration<F>>());
-    let (tx, rx) = sync_channel::<MinRootCircuit<F>>(buffer_size);
-
+    let (tx, rx) = sync_channel::<MinRootCircuit<F>>(32);
     // start witness generation thread
     let witness_thread = thread::spawn(move || {
         let instances = (0..num_steps).scan((x0, y0), |(x0, y0), _| {
